@@ -1,16 +1,15 @@
 "use strict";
 
-import { randomBytes } from "crypto";
-
-let id = null;
+import crypto from "crypto";
 
 /**
  * Generate a unique ID for the client.
  * @returns {Buffer} The generated ID.
  */
 export function genId() {
+  let id = null;
   if (!id) {
-    id = randomBytes(20);
+    id = crypto.randomBytes(20);
     Buffer.from("-AJ0001-").copy(id, 0);
   }
   return id;
