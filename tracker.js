@@ -7,35 +7,85 @@ import { randomBytes } from "crypto";
 import { infoHash, size } from "./torrent-parser.js";
 import { genId, group } from "./util.js";
 
+// How long to wait for a tracker to reply before moving on to the next one
+const TRACKER_TIMEOUT_MS = 5000;
+
 export function getPeers(torrent, callback) {
   const socket = createSocket("udp4");
-  const url = torrent.announce.toString("utf8");
+  const urls = udpTrackerUrls(torrent);
+  let index = 0;
+  let currentUrl = null;
+  let transactionId = null; // id of the request we're waiting on
+  let timer = null;
 
-  // 1. send connect request
-  udpSend(socket, buildConnReq(), url);
+  // Send a request to the current tracker and give up on it if it doesn't reply in time
+  function send(message) {
+    transactionId = message.readUInt32BE(12);
+    const url = currentUrl;
+    clearTimeout(timer);
+    timer = setTimeout(tryNextTracker, TRACKER_TIMEOUT_MS);
+    udpSend(socket, message, url, (err) => {
+      // e.g. DNS lookup failed: skip straight to the next tracker
+      if (err && url === currentUrl) tryNextTracker();
+    });
+  }
+
+  function tryNextTracker() {
+    clearTimeout(timer);
+    if (index >= urls.length) {
+      console.log("No UDP tracker responded.");
+      socket.close();
+      return;
+    }
+    currentUrl = urls[index++];
+    console.log("Trying tracker:", currentUrl);
+    // 1. send connect request
+    send(buildConnReq());
+  }
 
   socket.on("message", (response) => {
+    // ignore late replies from trackers we already gave up on
+    if (response.length < 8 || response.readUInt32BE(4) !== transactionId) return;
+
     if (respType(response) === "connect") {
       // 2. receive and parse connect response
       const connResp = parseConnResp(response);
       // 3. send announce request
-      const announceReq = buildAnnounceReq(connResp.connectionId, torrent);
-      udpSend(socket, announceReq, url);
+      send(buildAnnounceReq(connResp.connectionId, torrent));
     } else if (respType(response) === "announce") {
+      clearTimeout(timer);
       // 4. parse announce response
       const announceResp = parseAnnounceResp(response);
+      socket.close();
       // 5. pass peers to callback
       callback(announceResp.peers);
     }
   });
+
+  tryNextTracker();
 }
 
-function udpSend(socket, message, rawUrl, callback = () => {}) {
-  const url = new URL(rawUrl);
-  const port = Number(url.port || 0);
-  const host = url.hostname;
+// All UDP trackers in the torrent: "announce" first, then "announce-list", without duplicates.
+// bencode returns Uint8Array, so wrap each in a Buffer to decode as text.
+function udpTrackerUrls(torrent) {
+  const raw = [];
+  if (torrent.announce) raw.push(torrent.announce);
+  if (torrent["announce-list"]) raw.push(...torrent["announce-list"].flat());
 
-  socket.send(message, 0, message.length, port, host, callback);
+  const urls = raw.map((u) => Buffer.from(u).toString("utf8"));
+  return [...new Set(urls)].filter((u) => {
+    try {
+      const url = new URL(u);
+      return url.protocol === "udp:" && url.port !== "";
+    } catch {
+      return false;
+    }
+  });
+}
+
+function udpSend(socket, message, rawUrl, callback=()=>{}) {
+  const url = new URL(rawUrl);
+  socket.send(message, 0, message.length, Number(url.port), url.hostname, callback);
 }
 
 /*
