@@ -3,7 +3,6 @@
 import { readFileSync } from "fs";
 import bencode from "bencode";
 import crypto from "crypto";
-import bignum from "bignum";
 
 export function open(filepath) {
   return bencode.decode(readFileSync(filepath));
