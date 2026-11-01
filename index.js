@@ -1,9 +1,9 @@
 "use strict";
-import torrentParser from "./torrent-parser.js";
-import tracker from "./tracker.js";
+import { open } from "./torrent-parser.js";
+import { getPeers } from "./tracker.js";
 
-const torrent = torrentParser.open("puppy.torrent");
+const torrent = open("puppy.torrent");
 
-tracker.getPeers(torrent, (peers) => {
-    console.log('list of peers :', peers);
-})
+getPeers(torrent, (peers) => {
+  console.log("list of peers :", peers);
+});

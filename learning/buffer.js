@@ -1,18 +1,20 @@
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 
-const buf = Buffer.from([0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72,
- 0x6c, 0x64]);
+const buf = Buffer.from([
+  0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72,
+  0x6c, 0x64
+]);
 
 console.log(buf);
 // outputs <Buffer 68 65 6c 6c 6f 20 77 6f 72 6c 64>
 
-console.log(buf.toString('utf16le'));
+console.log(buf.toString("utf16le"));
 // outputs '敨汬⁯潷汲'
 
-console.log(buf.toString('utf8'));
+console.log(buf.toString("utf8"));
 // outputs 'hello world'
 
-console.log(Buffer.from('hello world', 'utf8'));
+console.log(Buffer.from("hello world", "utf8"));
 // outputs <Buffer 68 65 6c 6c 6f 20 77 6f 72 6c 64>
 
 // ====================================================

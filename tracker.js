@@ -2,9 +2,10 @@
 
 import { createSocket } from "dgram";
 import { Buffer } from "buffer";
-import { parse as urlParse } from "url";
 import { randomBytes } from "crypto";
-import * as util from "./util.js";
+
+import { infoHash, size } from "./torrent-parser.js";
+import { genId, group } from "./util.js";
 
 export function getPeers(torrent, callback) {
   const socket = createSocket("udp4");
@@ -30,8 +31,11 @@ export function getPeers(torrent, callback) {
 }
 
 function udpSend(socket, message, rawUrl, callback = () => {}) {
-  const url = urlParse(rawUrl);
-  socket.send(message, 0, message.length, url.port, url.host, callback);
+  const url = new URL(rawUrl);
+  const port = Number(url.port || 0);
+  const host = url.hostname;
+
+  socket.send(message, 0, message.length, port, host, callback);
 }
 
 /*
@@ -97,13 +101,13 @@ function buildAnnounceReq(connId, torrent, port = 6881) {
   // transaction id
   randomBytes(4).copy(buf, 12);
   // info hash
-  torrentParser.infoHash(torrent).copy(buf, 16);
+  infoHash(torrent).copy(buf, 16);
   // peerId
-  util.genId().copy(buf, 36);
+  genId().copy(buf, 36);
   // downloaded
   Buffer.alloc(8).copy(buf, 56);
   // left
-  torrentParser.size(torrent).copy(buf, 64);
+  size(torrent).copy(buf, 64);
   // uploaded
   Buffer.alloc(8).copy(buf, 72);
   // event
@@ -138,11 +142,11 @@ function parseAnnounceResp(resp) {
     interval: resp.readUInt32BE(8),
     leechers: resp.readUInt32BE(12),
     seeders: resp.readUInt32BE(16),
-    peers: util.group(resp.slice(20), 6).map((address) => {
-        return {
-            ip: address.slice(0, 4).join('.'),
-            port: address.readUInt16BE(4)
-        };
+    peers: group(resp.slice(20), 6).map((address) => {
+      return {
+        ip: Array.from(address.slice(0, 4)).join("."),
+        port: address.readUInt16BE(4)
+      };
     })
   };
 }
