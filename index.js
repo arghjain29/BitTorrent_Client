@@ -1,6 +1,6 @@
 "use strict";
-import { open } from "./torrent-parser.js";
-import { getPeers } from "./tracker.js";
+import { open } from "./src/torrent-parser.js";
+import { getPeers } from "./src/tracker.js";
 
 const torrent = open("torrents/sintel.torrent");
 
