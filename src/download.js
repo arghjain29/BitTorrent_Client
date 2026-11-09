@@ -54,6 +54,30 @@ function msgHandler(msg, socket) {
   if (isHandshake(msg)) {
     console.log("Handshake received");
     socket.write(message.buildInterested());
+  }else {
+    const m = message.parse(msg);
+    console.log("Message received:", m);
+
+    if (m.id === 0) {
+      console.log("Choke message received");
+    chokeHandler();
+    }
+    if (m.id === 1) {
+      console.log("Unchoke message received");
+      unchokeHandler();
+    }
+    if (m.id === 4) {
+      console.log("Have message received");
+      haveHandler(m.payload);
+    }
+    if (m.id === 5) {
+      console.log("Bitfield message received");
+      bitfieldHandler(m.payload);
+    }
+    if (m.id === 7) {
+        console.log("Piece message received");
+        pieceHandler(m.payload);
+    }
   }
 }
 
@@ -72,3 +96,14 @@ function onWholeMsg(socket, callback) {
     }
   });
 }
+
+
+function chokeHandler() {};
+
+function unchokeHandler() {};
+
+function haveHandler(payload) {};
+
+function bitfieldHandler(payload) {};
+
+function pieceHandler(payload) {};
