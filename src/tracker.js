@@ -10,6 +10,12 @@ import { genId, group } from "./util.js";
 // How long to wait for a tracker to reply before moving on to the next one
 const TRACKER_TIMEOUT_MS = 5000;
 
+/**
+ * Fetches peers from the torrent's trackers.
+ * @param {Object} torrent - The torrent object.
+ * @param {Function} callback - The callback function to be called with the list of peers.
+ * @returns {void}
+ */
 export function getPeers(torrent, callback) {
   const socket = createSocket("udp4");
   const urls = udpTrackerUrls(torrent);
@@ -65,8 +71,11 @@ export function getPeers(torrent, callback) {
   tryNextTracker();
 }
 
-// All UDP trackers in the torrent: "announce" first, then "announce-list", without duplicates.
-// bencode returns Uint8Array, so wrap each in a Buffer to decode as text.
+/**
+ * Returns the list of UDP tracker URLs from a torrent.
+ * @param {Object} torrent - The torrent object.
+ * @returns {Array<string>} - The list of UDP tracker URLs.
+ */
 function udpTrackerUrls(torrent) {
   const raw = [];
   if (torrent.announce) raw.push(torrent.announce);
@@ -83,6 +92,14 @@ function udpTrackerUrls(torrent) {
   });
 }
 
+/**
+ * Sends a UDP message to a specified URL.
+ * @param {Socket} socket - The UDP socket.
+  * @param {string} message - The message to send.
+  * @param {*} rawUrl - The URL to send the message to.
+  * @param {Function} callback - The callback function to be called after sending the message.
+  * @returns {void}
+ */
 function udpSend(socket, message, rawUrl, callback=()=>{}) {
   const url = new URL(rawUrl);
   socket.send(message, 0, message.length, Number(url.port), url.hostname, callback);
